@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/Ada-Capital/ripple-upgrade/data"
@@ -20,7 +20,7 @@ func checkErr(err error, quit bool) {
 }
 
 var (
-	host     = flag.String("host", "wss://s2.ripple.com:443", "websockets host to connect to")
+	host     = flag.String("host", "wss://s.altnet.rippletest.net:51233", "websockets host to connect to")
 	proposed = flag.Bool("proposed", false, "include proposed transacions")
 )
 
@@ -29,9 +29,10 @@ func main() {
 	r, err := websockets.NewRemote(*host)
 	checkErr(err, true)
 
-	confirmation, err := r.Subscribe(true, !*proposed, *proposed, true)
+	confirmation, err := r.Subscribe(true, false, false, true, nil)
 	checkErr(err, true)
-	terminal.Println(fmt.Sprint("Subscribed at: ", confirmation.LedgerSequence), terminal.Default)
+	log.Println(confirmation)
+	//terminal.Println(fmt.Sprint("Subscribed at: ", confirmation.LedgerSequence), terminal.Default)
 
 	// Consume messages as they arrive
 	for {

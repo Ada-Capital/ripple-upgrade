@@ -58,13 +58,14 @@ var streamMessageFactory = map[string]func() interface{}{
 
 type SubscribeCommand struct {
 	*Command
-	Streams []string                `json:"streams"`
-	Books   []OrderBookSubscription `json:"books,omitempty"`
-	Result  *SubscribeResult        `json:"result,omitempty"`
+	Streams  []string                `json:"streams"`
+	Accounts []data.Account          `json:"accounts,omitempty"`
+	Books    []OrderBookSubscription `json:"books,omitempty"`
+	Result   *SubscribeResult        `json:"result,omitempty"`
 }
 
 type SubscribeResult struct {
-	// Contains one or both of these, depending what streams were subscribed
+	// Contains one or multiple of these, depending what streams were subscribed
 	*LedgerStreamMsg
 	*ServerStreamMsg
 	// Contains "bids" and "asks" when "both" is true.
