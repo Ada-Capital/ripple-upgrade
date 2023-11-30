@@ -3,7 +3,7 @@ package data
 import (
 	"sort"
 
-	"github.com/rubblelabs/ripple/crypto"
+	"github.com/Ada-Capital/ripple-upgrade/crypto"
 )
 
 func Sign(s Signable, key crypto.Key, sequence *uint32) error {

@@ -1,4 +1,4 @@
-module github.com/rubblelabs/ripple
+module github.com/Ada-Capital/ripple-upgrade
 
 go 1.19
 

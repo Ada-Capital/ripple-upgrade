@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rubblelabs/ripple/crypto"
+	"github.com/Ada-Capital/ripple-upgrade/crypto"
 )
 
 type Amount struct {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/Ada-Capital/ripple-upgrade/data"
+	"github.com/Ada-Capital/ripple-upgrade/websockets"
 	"github.com/fatih/color"
-	"github.com/rubblelabs/ripple/data"
-	"github.com/rubblelabs/ripple/websockets"
 )
 
 type Flag uint32

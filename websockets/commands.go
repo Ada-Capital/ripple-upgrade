@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/rubblelabs/ripple/data"
+	"github.com/Ada-Capital/ripple-upgrade/data"
 )
 
 var counter uint64
