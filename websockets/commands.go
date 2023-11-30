@@ -229,6 +229,18 @@ type AccountInfoResult struct {
 	AccountData    data.AccountRoot `json:"account_data"`
 }
 
+type AccountObjectsTicketsCommand struct {
+	*Command
+	Account data.Account                 `json:"account"`
+	Type    string                       `json:"type"`
+	Result  *AccountObjectsTicketsResult `json:"result,omitempty"`
+}
+
+type AccountObjectsTicketsResult struct {
+	LedgerSequence uint32        `json:"ledger_current_index"`
+	AccountObjects []data.Ticket `json:"account_objects"`
+}
+
 type AccountLinesCommand struct {
 	*Command
 	Account     data.Account        `json:"account"`
