@@ -43,7 +43,7 @@ type Remote struct {
 
 // NewRemote returns a new remote session connected to the specified
 // server endpoint URI. To close the connection, use Close().
-func NewRemote(endpoint string, autoReconnect bool) (*Remote, error) {
+func NewRemote(endpoint string) (*Remote, error) {
 	glog.Infoln(endpoint)
 	r := &Remote{
 		outgoing: make(chan Syncer, 100),
