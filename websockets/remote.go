@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"reflect"
@@ -36,28 +37,17 @@ type Remote struct {
 	Incoming chan interface{}
 	outgoing chan Syncer
 	ws       *websocket.Conn
+
+	endpoint string
 }
 
 // NewRemote returns a new remote session connected to the specified
 // server endpoint URI. To close the connection, use Close().
-func NewRemote(endpoint string) (*Remote, error) {
+func NewRemote(endpoint string, autoReconnect bool) (*Remote, error) {
 	glog.Infoln(endpoint)
-	u, err := url.Parse(endpoint)
-	if err != nil {
-		return nil, err
-	}
-	c, err := net.DialTimeout("tcp", u.Host, dialTimeout)
-	if err != nil {
-		return nil, err
-	}
-	ws, _, err := websocket.NewClient(c, u, nil, 1024, 1024)
-	if err != nil {
-		return nil, err
-	}
 	r := &Remote{
-		Incoming: make(chan interface{}, 1000),
-		outgoing: make(chan Syncer, 10),
-		ws:       ws,
+		outgoing: make(chan Syncer, 100),
+		endpoint: endpoint,
 	}
 
 	go r.run()
@@ -78,6 +68,29 @@ func (r *Remote) Close() {
 
 // run spawns the read/write pumps and then runs until Close() is called.
 func (r *Remote) run() {
+
+	for {
+		u, err := url.Parse(r.endpoint)
+		if err != nil {
+			panic(err)
+		}
+		c, err := net.DialTimeout("tcp", u.Host, dialTimeout)
+		if err != nil {
+			log.Println("Error dialing XRP. Retrying in 5 sec")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		ws, _, err := websocket.NewClient(c, u, nil, 1024, 1024)
+		if err != nil {
+			log.Println("Error dialing XRP. Retrying in 5 sec")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		r.ws = ws
+		break
+	}
+
+	r.Incoming = make(chan interface{}, 1000)
 	outbound := make(chan interface{})
 	inbound := make(chan []byte)
 	pending := make(map[uint64]Syncer)
@@ -95,6 +108,9 @@ func (r *Remote) run() {
 		// indicating that the readPump has returned.
 		for range inbound {
 		}
+
+		go r.run()
+
 	}()
 
 	// Spawn read/write goroutines
