@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"reflect"
@@ -69,27 +68,29 @@ func (r *Remote) Close() {
 // run spawns the read/write pumps and then runs until Close() is called.
 func (r *Remote) run() {
 
+	var con net.Conn
+	var ws *websocket.Conn
+
 	for {
 		u, err := url.Parse(r.endpoint)
 		if err != nil {
 			panic(err)
 		}
-		c, err := net.DialTimeout("tcp", u.Host, dialTimeout)
+		con, err = net.DialTimeout("tcp", u.Host, dialTimeout)
 		if err != nil {
-			log.Println("Error dialing XRP. Retrying in 5 sec")
+			glog.Errorln("Error dialing XRP. Retrying in 5 sec")
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		ws, _, err := websocket.NewClient(c, u, nil, 1024, 1024)
+		ws, _, err = websocket.NewClient(con, u, nil, 1024, 1024)
 		if err != nil {
-			log.Println("Error dialing XRP. Retrying in 5 sec")
+			glog.Errorln("Error dialing XRP. Retrying in 5 sec")
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		r.ws = ws
 		break
 	}
-
+	r.ws = ws
 	r.Incoming = make(chan interface{}, 1000)
 	outbound := make(chan interface{})
 	inbound := make(chan []byte)
