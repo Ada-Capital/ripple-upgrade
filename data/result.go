@@ -198,6 +198,8 @@ const (
 	terLAST                          // Process after all other transactions
 	terNO_RIPPLE                     // Rippling not allowed
 	terQUEUED                        // Transaction is being held in TxQ until fee drops
+	terSUBMITTED                     // Transaction has been submitted, but not yet applied
+	terPRE_TICKET                    // The transaction attempted to use a Ticket, but the specified TicketSequence number does not exist in the ledger. However, the Ticket could still be created by another transaction.
 )
 
 var resultNames = map[TransactionResult]struct {
@@ -337,6 +339,8 @@ var resultNames = map[TransactionResult]struct {
 	terPRE_SEQ:     {"terPRE_SEQ", "Missing/inapplicable prior transaction."},
 	terOWNERS:      {"terOWNERS", "Non-zero owner count."},
 	terQUEUED:      {"terQUEUED", "Held until escalated fee drops."},
+	terSUBMITTED:   {"terSUBMITTED", "Transaction has been submitted, but not yet applied."},
+	terPRE_TICKET:  {"terPRE_TICKET", "The transaction attempted to use a Ticket, but the specified TicketSequence number does not exist in the ledger. However, the Ticket could still be created by another transaction."},
 }
 
 var reverseResults map[string]TransactionResult
