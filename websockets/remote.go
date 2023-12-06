@@ -166,7 +166,9 @@ func (r *Remote) run() {
 			}
 			delete(pending, response.Id)
 			if err := json.Unmarshal(in, &cmd); err != nil {
-				glog.Errorln(err.Error())
+				msg := fmt.Sprintf("%s ---- %s", err.Error(), string(in))
+				glog.Errorln(msg)
+				cmd.Fail(msg)
 				continue
 			}
 			cmd.Done()
