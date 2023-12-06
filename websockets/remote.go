@@ -78,13 +78,13 @@ func (r *Remote) run() {
 		}
 		con, err = net.DialTimeout("tcp", u.Host, dialTimeout)
 		if err != nil {
-			glog.Errorln("Error dialing XRP. Retrying in 5 sec")
+			glog.Errorln("Error dialing XRP. Retrying in 5 sec", err.Error())
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		ws, _, err = websocket.NewClient(con, u, nil, 1024, 1024)
 		if err != nil {
-			glog.Errorln("Error dialing XRP. Retrying in 5 sec")
+			glog.Errorln("Error dialing XRP. Retrying in 5 sec", err.Error())
 			time.Sleep(5 * time.Second)
 			continue
 		}
