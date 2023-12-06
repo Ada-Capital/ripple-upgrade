@@ -198,6 +198,7 @@ func (r *Remote) accountTx(account data.Account, c chan *data.TransactionWithMet
 		<-cmd.Ready
 		if cmd.CommandError != nil {
 			glog.Errorln(cmd.Error())
+			c <- nil
 			return
 		}
 		for _, tx := range cmd.Result.Transactions {
