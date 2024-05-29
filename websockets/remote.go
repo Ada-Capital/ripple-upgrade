@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -635,21 +634,19 @@ func (r *Remote) httpReqFromWs(cmd interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	log.Println(newJson)
-
 	res, err := http.Post(r.endpoint, "application/json", bytes.NewReader([]byte(newJson)))
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println(res.StatusCode)
 
 	respData, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println(string(respData))
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.New(string(respData))
+	}
 
 	err = json.Unmarshal(respData, &cmd)
 	if err != nil {
