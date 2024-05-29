@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"reflect"
 	"sort"
@@ -50,6 +54,16 @@ func NewRemote(endpoint string) (*Remote, error) {
 	}
 
 	go r.run()
+	return r, nil
+}
+
+func NewRemoteHttp(endpoint string) (*Remote, error) {
+	glog.Infoln(endpoint)
+	r := &Remote{
+		outgoing: make(chan Syncer, 100),
+		endpoint: endpoint,
+	}
+
 	return r, nil
 }
 
@@ -190,6 +204,25 @@ func (r *Remote) Tx(hash data.Hash256) (*TxResult, error) {
 	return cmd.Result, nil
 }
 
+func (r *Remote) TxHttp(hash data.Hash256) (*TxResult, error) {
+	cmd := &TxCommand{
+		Command:     newCommand("tx"),
+		Transaction: hash,
+	}
+
+	respCmd, err := r.httpReqFromWs(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd = respCmd.(*TxCommand)
+
+	if cmd.CommandError != nil {
+		return nil, cmd.CommandError
+	}
+	return cmd.Result, nil
+}
+
 func (r *Remote) accountTx(account data.Account, c chan *data.TransactionWithMetaData, pageSize int, minLedger, maxLedger int64) {
 	defer close(c)
 	cmd := newAccountTxCommand(account, pageSize, nil, minLedger, maxLedger)
@@ -224,6 +257,30 @@ func (r *Remote) AccountTx(account data.Account, pageSize int, minLedger, maxLed
 	return c
 }
 
+func (r *Remote) AccountTxHttp(account data.Account, pageSize int, minLedger, maxLedger int64) ([]*data.TransactionWithMetaData, error) {
+	var resp []*data.TransactionWithMetaData
+	cmd := newAccountTxCommand(account, pageSize, nil, minLedger, maxLedger)
+	for ; ; cmd = newAccountTxCommand(account, pageSize, cmd.Result.Marker, minLedger, maxLedger) {
+
+		respCmd, err := r.httpReqFromWs(cmd)
+		if err != nil {
+			return nil, err
+		}
+
+		cmd = respCmd.(*AccountTxCommand)
+
+		if cmd.CommandError != nil {
+			return nil, errors.New(cmd.Error())
+		}
+		for _, tx := range cmd.Result.Transactions {
+			resp = append(resp, tx)
+		}
+		if cmd.Result.Marker == nil {
+			return resp, nil
+		}
+	}
+}
+
 // Synchronously submit a single transaction
 func (r *Remote) Submit(tx data.Transaction) (*SubmitResult, error) {
 	_, raw, err := data.Raw(tx)
@@ -236,6 +293,29 @@ func (r *Remote) Submit(tx data.Transaction) (*SubmitResult, error) {
 	}
 	r.outgoing <- cmd
 	<-cmd.Ready
+	if cmd.CommandError != nil {
+		return nil, cmd.CommandError
+	}
+	return cmd.Result, nil
+}
+
+func (r *Remote) SubmitHttp(tx data.Transaction) (*SubmitResult, error) {
+	_, raw, err := data.Raw(tx)
+	if err != nil {
+		return nil, err
+	}
+	cmd := &SubmitCommand{
+		Command: newCommand("submit"),
+		TxBlob:  fmt.Sprintf("%X", raw),
+	}
+
+	respCmd, err := r.httpReqFromWs(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd = respCmd.(*SubmitCommand)
+
 	if cmd.CommandError != nil {
 		return nil, cmd.CommandError
 	}
@@ -357,6 +437,28 @@ func (r *Remote) Ledger(ledger interface{}, transactions bool) (*LedgerResult, e
 	return cmd.Result, nil
 }
 
+func (r *Remote) LedgerHttp(ledger interface{}, transactions bool) (*LedgerResult, error) {
+	cmd := &LedgerCommand{
+		Command:      newCommand("ledger"),
+		LedgerIndex:  ledger,
+		Transactions: transactions,
+		Expand:       true,
+	}
+
+	respCmd, err := r.httpReqFromWs(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd = respCmd.(*LedgerCommand)
+
+	if cmd.CommandError != nil {
+		return nil, cmd.CommandError
+	}
+	cmd.Result.Ledger.Transactions.Sort()
+	return cmd.Result, nil
+}
+
 func (r *Remote) LedgerHeader(ledger interface{}) (*LedgerHeaderResult, error) {
 	cmd := &LedgerHeaderCommand{
 		Command: newCommand("ledger_header"),
@@ -401,6 +503,25 @@ func (r *Remote) AccountInfo(a data.Account) (*AccountInfoResult, error) {
 	return cmd.Result, nil
 }
 
+func (r *Remote) AccountInfoHttp(a data.Account) (*AccountInfoResult, error) {
+	cmd := &AccountInfoCommand{
+		Command: newCommand("account_info"),
+		Account: a,
+	}
+
+	respCmd, err := r.httpReqFromWs(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd = respCmd.(*AccountInfoCommand)
+
+	if cmd.CommandError != nil {
+		return nil, cmd.CommandError
+	}
+	return cmd.Result, nil
+}
+
 // Synchronously requests account objects
 func (r *Remote) AccountObjectsTickets(a data.Account) (*AccountObjectsTicketsResult, error) {
 	cmd := &AccountObjectsTicketsCommand{
@@ -410,6 +531,26 @@ func (r *Remote) AccountObjectsTickets(a data.Account) (*AccountObjectsTicketsRe
 	}
 	r.outgoing <- cmd
 	<-cmd.Ready
+	if cmd.CommandError != nil {
+		return nil, cmd.CommandError
+	}
+	return cmd.Result, nil
+}
+
+func (r *Remote) AccountObjectsTicketsHttp(a data.Account) (*AccountObjectsTicketsResult, error) {
+	cmd := &AccountObjectsTicketsCommand{
+		Command: newCommand("account_objects"),
+		Account: a,
+		Type:    "ticket",
+	}
+
+	respCmd, err := r.httpReqFromWs(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd = respCmd.(*AccountObjectsTicketsCommand)
+
 	if cmd.CommandError != nil {
 		return nil, cmd.CommandError
 	}
@@ -447,6 +588,108 @@ func (r *Remote) AccountLines(account data.Account, ledgerIndex interface{}) (*A
 			return cmd.Result, nil
 		}
 	}
+}
+
+// Synchronously requests account line info
+func (r *Remote) AccountLinesHttp(account data.Account, ledgerIndex interface{}) (*AccountLinesResult, error) {
+	var (
+		lines  data.AccountLineSlice
+		marker *data.Hash256
+	)
+	for {
+		cmd := &AccountLinesCommand{
+			Command:     newCommand("account_lines"),
+			Account:     account,
+			Limit:       400,
+			Marker:      marker,
+			LedgerIndex: ledgerIndex,
+		}
+
+		respCmd, err := r.httpReqFromWs(cmd)
+		if err != nil {
+			return nil, err
+		}
+
+		cmd = respCmd.(*AccountLinesCommand)
+
+		if cmd.Result.Marker != nil {
+			lines = append(lines, cmd.Result.Lines...)
+			marker = cmd.Result.Marker
+			if cmd.Result.LedgerSequence != nil {
+				ledgerIndex = *cmd.Result.LedgerSequence
+			}
+		} else {
+			cmd.Result.Lines = append(lines, cmd.Result.Lines...)
+			cmd.Result.Lines.SortByCurrencyAmount()
+			return cmd.Result, nil
+		}
+	}
+}
+
+func (r *Remote) httpReqFromWs(cmd interface{}) (interface{}, error) {
+
+	bodyData, _ := json.Marshal(cmd)
+
+	newJson, err := transformJSON(string(bodyData))
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println(newJson)
+
+	res, err := http.Post(r.endpoint, "application/json", bytes.NewReader([]byte(newJson)))
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println(res.StatusCode)
+
+	respData, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println(string(respData))
+
+	err = json.Unmarshal(respData, &cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	_ = res.Body.Close()
+
+	return cmd, nil
+
+}
+
+func transformJSON(originalJSON string) (string, error) {
+	// Unmarshal the original JSON into a map
+	var originalMap map[string]interface{}
+	if err := json.Unmarshal([]byte(originalJSON), &originalMap); err != nil {
+		return "", err
+	}
+
+	// Create a new map for the transformed JSON
+	transformedMap := make(map[string]interface{})
+
+	// Move fields to the new map, transforming as needed
+	if command, ok := originalMap["command"].(string); ok {
+		transformedMap["method"] = command
+		delete(originalMap, "command")
+	}
+
+	delete(originalMap, "id") // Remove the "id" field
+
+	// Create the params list with a single map containing the remaining fields
+	transformedMap["params"] = []map[string]interface{}{originalMap}
+
+	// Marshal the transformed map back into JSON
+	transformedJSON, err := json.Marshal(transformedMap)
+	if err != nil {
+		return "", err
+	}
+
+	return string(transformedJSON), nil
 }
 
 // Synchronously requests account offers
@@ -562,6 +805,24 @@ func (r *Remote) Fee() (*FeeResult, error) {
 	}
 	r.outgoing <- cmd
 	<-cmd.Ready
+	if cmd.CommandError != nil {
+		return nil, cmd.CommandError
+	}
+	return cmd.Result, nil
+}
+
+func (r *Remote) FeeHttp() (*FeeResult, error) {
+	cmd := &FeeCommand{
+		Command: newCommand("fee"),
+	}
+
+	respCmd, err := r.httpReqFromWs(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd = respCmd.(*FeeCommand)
+
 	if cmd.CommandError != nil {
 		return nil, cmd.CommandError
 	}

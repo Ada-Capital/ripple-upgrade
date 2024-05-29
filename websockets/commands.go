@@ -75,6 +75,7 @@ type AccountTxCommand struct {
 type AccountTxResult struct {
 	Marker       map[string]interface{} `json:"marker,omitempty"`
 	Transactions data.TransactionSlice  `json:"transactions,omitempty"`
+	Status       string                 `json:"status"`
 }
 
 func newAccountTxCommand(account data.Account, pageSize int, marker map[string]interface{}, minLedger, maxLedger int64) *AccountTxCommand {
@@ -105,7 +106,8 @@ type TxCommand struct {
 
 type TxResult struct {
 	data.TransactionWithMetaData
-	Validated bool `json:"validated"`
+	Validated bool   `json:"validated"`
+	Status    string `json:"status"`
 }
 
 // A shim to populate the Validated field before passing
@@ -137,6 +139,7 @@ type SubmitResult struct {
 	EngineResultMessage string                 `json:"engine_result_message"`
 	TxBlob              string                 `json:"tx_blob"`
 	Tx                  interface{}            `json:"tx_json"`
+	Status              string                 `json:"status"`
 }
 
 type LedgerCommand struct {
@@ -150,6 +153,7 @@ type LedgerCommand struct {
 
 type LedgerResult struct {
 	Ledger data.Ledger
+	Status string `json:"status"`
 }
 
 type LedgerHeaderCommand struct {
@@ -163,6 +167,7 @@ type LedgerHeaderResult struct {
 	LedgerSequence uint32              `json:"ledger_index"`
 	Hash           *data.Hash256       `json:"ledger_hash,omitempty"`
 	LedgerData     data.VariableLength `json:"ledger_data"`
+	Status         string              `json:"status"`
 }
 
 type LedgerDataCommand struct {
@@ -185,6 +190,7 @@ type LedgerDataResult struct {
 	Hash           data.Hash256          `json:"ledger_hash"`
 	Marker         *data.Hash256         `json:"marker"`
 	State          data.LedgerEntrySlice `json:"state"`
+	Status         string                `json:"status"`
 }
 
 type BinaryLedgerData struct {
@@ -197,6 +203,7 @@ type BinaryLedgerDataResult struct {
 	Hash           data.Hash256       `json:"ledger_hash"`
 	Marker         *data.Hash256      `json:"marker"`
 	State          []BinaryLedgerData `json:"state"`
+	Status         string             `json:"status"`
 }
 
 type RipplePathFindCommand struct {
@@ -216,6 +223,7 @@ type RipplePathFindResult struct {
 	}
 	DestAccount    data.Account    `json:"destination_account"`
 	DestCurrencies []data.Currency `json:"destination_currencies"`
+	Status         string          `json:"status"`
 }
 
 type AccountInfoCommand struct {
@@ -227,6 +235,7 @@ type AccountInfoCommand struct {
 type AccountInfoResult struct {
 	LedgerSequence uint32           `json:"ledger_current_index"`
 	AccountData    data.AccountRoot `json:"account_data"`
+	Status         string           `json:"status"`
 }
 
 type AccountObjectsTicketsCommand struct {
@@ -239,6 +248,7 @@ type AccountObjectsTicketsCommand struct {
 type AccountObjectsTicketsResult struct {
 	LedgerSequence uint32        `json:"ledger_current_index"`
 	AccountObjects []data.Ticket `json:"account_objects"`
+	Status         string        `json:"status"`
 }
 
 type AccountLinesCommand struct {
@@ -255,6 +265,7 @@ type AccountLinesResult struct {
 	Account        data.Account          `json:"account"`
 	Marker         *data.Hash256         `json:"marker"`
 	Lines          data.AccountLineSlice `json:"lines"`
+	Status         string                `json:"status"`
 }
 
 type AccountOffersCommand struct {
@@ -271,6 +282,7 @@ type AccountOffersResult struct {
 	Account        data.Account           `json:"account"`
 	Marker         *data.Hash256          `json:"marker"`
 	Offers         data.AccountOfferSlice `json:"offers"`
+	Status         string                 `json:"status"`
 }
 
 type BookOffersCommand struct {
@@ -286,6 +298,7 @@ type BookOffersCommand struct {
 type BookOffersResult struct {
 	LedgerSequence uint32                `json:"ledger_index"`
 	Offers         []data.OrderBookOffer `json:"offers"`
+	Status         string                `json:"status"`
 }
 
 type FeeCommand struct {
