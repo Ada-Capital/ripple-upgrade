@@ -639,6 +639,8 @@ func (r *Remote) httpReqFromWs(cmd interface{}) (interface{}, error) {
 		return nil, err
 	}
 
+	defer res.Body.Close()
+
 	respData, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
@@ -652,8 +654,6 @@ func (r *Remote) httpReqFromWs(cmd interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	_ = res.Body.Close()
 
 	return cmd, nil
 
