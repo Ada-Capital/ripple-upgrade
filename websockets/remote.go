@@ -634,7 +634,9 @@ func (r *Remote) httpReqFromWs(cmd interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	res, err := http.Post(r.endpoint, "application/json", bytes.NewReader([]byte(newJson)))
+	httpClient := http.Client{Timeout: 3 * time.Second}
+
+	res, err := httpClient.Post(r.endpoint, "application/json", bytes.NewReader([]byte(newJson)))
 	if err != nil {
 		return nil, err
 	}
